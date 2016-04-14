@@ -1,8 +1,8 @@
 # django-disqus-backstore
 
-A django app for managing disqus post/thread in django admin.
+A django app for managing Disqus post/thread in django admin.
 
-### WARNING: Currently this project is under initial construction to show "Hey, we can CRUD disqus post in the django admin!", so the setting and usage may change frequently. It's unstable for real project now.
+### WARNING: Currently this project is under initial construction to show "Hey, we can CRUD Disqus post in the django admin!", so the setting and usage may change frequently. It's unstable for real project now.
 
 ## How to use
 
