@@ -3,20 +3,9 @@ from django.db import models
 from django.utils.text import camel_case_to_spaces
 
 
-class PK(object):
-    name = 'pk'
-    attname = 'attpk'
-
 class ThreadOptions(object):
     abstract = False
-    swapped = False
-    #app_label and model_name are required by admin.sites.get_urls
-    
-    app_label = "disqus_back_store" #should be defined in model and app
-
-    # dumb implementation for primary key field
-    pk = PK()
-    # required for admin.view.main.ChangeList.get_queryset which want to get ordered field
+    swapped = False    
     ordering = None
 
     fields = dict()

@@ -3,14 +3,12 @@ import copy
 from .disqus_interface import DisqusQuery
 
 
-#QuerySet, should be properly defined
 class ThreadQuerySet(object):
     # order_by, filter, query are required in admin.options.get_queryset
     def __init__(self, model=None, query=None, using=None, hints=None):
         self.model = model
         self.query = query or DisqusQuery()
         self.using = using
-        #dumb implementation for queryset data, should be replaced by disqus api
 
     def create(self, *args, **kwargs):
         obj = self.model(**kwargs)
@@ -18,7 +16,10 @@ class ThreadQuerySet(object):
         
     def order_by(self, *args, **kwargs):
         return self
-    # admin needs filter to get current model data
+
+    # TODO: Currently for prove of concept, we just get data
+    # from disqus api and put them directly into model instance.
+    # We should seperate the model instance generation code elsewhere        
     def filter(self, *args, **kwargs):
         if not getattr(self,'rawdata',None):
             self.rawdata = self.query.get_threads_list()
@@ -29,9 +30,13 @@ class ThreadQuerySet(object):
             forum=thread['forum']
         ) for thread in self.rawdata['response']]
         return self
+        
     def all(self, *args, **kwargs):
         return self.data
-    # To support count operation, queryset should has __len__
+
+    def count(self, *args, **kwargs):
+        return len(self.data)
+        
     def __len__(self):
         return len(self.data)
 
