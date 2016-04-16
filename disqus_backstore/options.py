@@ -6,7 +6,7 @@ from django.utils.text import camel_case_to_spaces
 
 class DisqusOptions(object):
     abstract = False
-    swapped = False    
+    swapped = False
     ordering = None
 
     fields = dict()
@@ -24,19 +24,16 @@ class DisqusOptions(object):
         self.verbose_name_plural = self.verbose_name + 's'
         self.concrete_model = self.model
         self.setup_pk(self.model.id)
-        
+
     def add_field(self, field, virtual=False):
         self.fields[field.name] = field
 
     def setup_pk(self, field):
         self.pk = field
-        
+
     # required for admin.view.main.ChangeList.get_queryset
     def get_field(self, field_name):
         field = self.fields.get(field_name)
         if not field:
             raise FieldDoesNotExist('{field} not exist.'.format(field=field_name))
         return field
-    
-    
-

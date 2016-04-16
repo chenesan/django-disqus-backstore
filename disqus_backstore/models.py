@@ -33,7 +33,7 @@ class State(object):
 class DisqusBase(object):
 
     _state = State()
-    
+
     def __init__(self, *args, **kwargs):
         for k, v in kwargs.items():
             setattr(self, k, v)
@@ -64,12 +64,12 @@ class DisqusBase(object):
         except FieldDoesNotExist:
             return getattr(self, field_name)
         return getattr(self, field.attname)
-    
+
 class Thread(DisqusBase):
-    __metaclass__ = DisqusMeta            
+    __metaclass__ = DisqusMeta
     _default_manager = ThreadManager()
     _meta = DisqusOptions()
-    
+
     title = models.CharField(max_length=100)
     link = models.URLField()
     id = models.UUIDField(primary_key=True)
@@ -78,12 +78,17 @@ class Thread(DisqusBase):
     def __str__(self):
         return self.title
 
+    def __eq__(self, rhs):
+        return self.id == rhs.id
+
+    def __ne__(self, rhs):
+        return not self.__eq__(rhs)
 
 class Post(DisqusBase):
-    __metaclass__ = DisqusMeta            
+    __metaclass__ = DisqusMeta
     _default_manager = PostManager()
     _meta = DisqusOptions()
-    
+
     message = models.TextField()
     id = models.UUIDField(primary_key=True)
     forum = models.CharField(max_length=100)
@@ -98,6 +103,12 @@ class Post(DisqusBase):
         thread = self._meta.get_field('thread').remote_field.model.objects.get(id=thread_id)
         self.thread = thread
         self.thread_id = thread.id
-        
+
+    def __eq__(self, rhs):
+        return self.id == rhs.id
+
+    def __ne__(self, rhs):
+        return not self.__eq__(rhs)
+
     def __str__(self):
-        return self.thread.title
+        return self.message if self.message else "Message is empty."
