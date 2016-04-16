@@ -15,3 +15,10 @@ class DisqusQuery(object):
                                 'api_secret': self.secret_key,
                                 'forum': self.forum
                             }).json()
+    def get_posts_list(self):
+        return requests.get('https://disqus.com/api/3.0/forums/listPosts.json',
+                            params={
+                                'api_secret': self.secret_key,
+                                'forum': self.forum,
+                                'include': ["unapproved", "approved", "spam", "deleted", "flagged", "highlighted"],
+                            }).json()

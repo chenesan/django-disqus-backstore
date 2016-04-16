@@ -3,7 +3,7 @@ from django.db import models
 from django.utils.text import camel_case_to_spaces
 
 
-class ThreadOptions(object):
+class DisqusOptions(object):
     abstract = False
     swapped = False    
     ordering = None
