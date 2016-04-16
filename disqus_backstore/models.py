@@ -8,10 +8,10 @@ from django.db import models
 from .options import ThreadOptions
 from .manager import ThreadManager
 
-class ThreadBase(type):
+class DisqusBase(type):
 
     def __new__(cls, name, bases, attrs):
-        cls = super(ThreadBase, cls).__new__(cls, name, bases, attrs)
+        cls = super(DisqusBase, cls).__new__(cls, name, bases, attrs)
         app_config = apps.get_containing_app_config(attrs['__module__'])
         if getattr(cls, "app_label", None) is None:
             attrs['_meta'].app_label = app_config.label
@@ -28,7 +28,7 @@ class ThreadBase(type):
     
         
 class Thread(object):
-    __metaclass__ = ThreadBase
+    __metaclass__ = DisqusBase
     _default_manager = ThreadManager()
     _meta = ThreadOptions()
     
