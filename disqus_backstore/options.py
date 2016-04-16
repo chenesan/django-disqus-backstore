@@ -1,3 +1,4 @@
+from django.apps import apps
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.utils.text import camel_case_to_spaces
@@ -12,7 +13,8 @@ class DisqusOptions(object):
 
     def __init__(self, *args, **kwargs):
         self.managers = []
-    
+        self.default_related_name = None
+        self.apps = apps
     def contribute_to_class(self, cls, name):
         self.model = cls
         cls._meta = self
@@ -20,6 +22,7 @@ class DisqusOptions(object):
         self.model_name = self.object_name.lower()
         self.verbose_name = camel_case_to_spaces(self.object_name)
         self.verbose_name_plural = self.verbose_name + 's'
+        self.concrete_model = self.model
         self.setup_pk(self.model.id)
         
     def add_field(self, field, virtual=False):

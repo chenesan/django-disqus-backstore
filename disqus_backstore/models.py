@@ -4,6 +4,7 @@ import six
 
 from django.apps import apps
 from django.db import models
+from django.db.models.fields.related import RelatedField
 
 from .options import DisqusOptions
 from .manager import ThreadManager, PostManager
@@ -17,7 +18,7 @@ class DisqusMeta(type):
             attrs['_meta'].app_label = app_config.label
         attrs['_meta'].contribute_to_class(cls, '_meta')
         attrs['_default_manager'].contribute_to_class(cls, '_default_manager')
-        print cls, cls._meta
+        cls.objects = attrs['_default_manager']
         for attr in attrs:
             if attr[0] != '_' and isinstance(attrs[attr], models.Field):
                 try:
@@ -25,10 +26,14 @@ class DisqusMeta(type):
                 except KeyError:
                     pass
         return cls
-    
+
+class State(object):
+    db = None
 
 class DisqusBase(object):
 
+    _state = State()
+    
     def __init__(self, *args, **kwargs):
         for k, v in kwargs.items():
             setattr(self, k, v)
@@ -70,11 +75,8 @@ class Thread(DisqusBase):
     id = models.UUIDField(primary_key=True)
     forum = models.CharField(max_length=100)
 
-
-
     def __str__(self):
         return self.title
-        
 
 
 class Post(DisqusBase):
@@ -88,6 +90,14 @@ class Post(DisqusBase):
     is_spam = models.BooleanField()
     is_deleted = models.BooleanField()
     is_approved = models.BooleanField()
+    thread = models.ForeignKey(Thread)
 
+    def __init__(self, *args, **kwargs):
+        thread_id = kwargs.pop('thread')
+        super(Post, self).__init__(self, *args, **kwargs)
+        thread = self._meta.get_field('thread').remote_field.model.objects.get(id=thread_id)
+        self.thread = thread
+        self.thread_id = thread.id
+        
     def __str__(self):
-        return self.message if self.message else "No message."
+        return self.thread.title
