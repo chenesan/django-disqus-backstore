@@ -19,10 +19,18 @@ class DisqusQuery(object):
         return requests.get('https://disqus.com/api/3.0/forums/listThreads.json',
                             params=params).json()
 
-    def get_posts_list(self):
+    def get_posts_list(self, *args, **kwargs):
         return requests.get('https://disqus.com/api/3.0/forums/listPosts.json',
                             params={
                                 'api_secret': self.secret_key,
                                 'forum': self.forum,
                                 'include': ["unapproved", "approved", "spam", "deleted", "flagged", "highlighted"],
                             }).json()
+
+    def get_post(self, post, *args, **kwargs):
+        return requests.get('https://disqus.com/api/3.0/posts/details.json',
+                            params={
+                                'api_secret': self.secret_key,
+#                                'forum': self.forum,
+                                'post': post
+                            }).json()            

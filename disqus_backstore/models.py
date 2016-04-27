@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 import six
 
 from django.apps import apps
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.db.models.fields.related import RelatedField
 
@@ -33,6 +34,9 @@ class State(object):
 class DisqusBase(object):
 
     _state = State()
+    _deferred = False
+    
+    DoesNotExist = ObjectDoesNotExist
 
     def __init__(self, *args, **kwargs):
         for k, v in kwargs.items():
@@ -69,13 +73,19 @@ class Thread(DisqusBase):
     __metaclass__ = DisqusMeta
     _default_manager = ThreadManager()
     _meta = DisqusOptions()
-
+    
     title = models.CharField(max_length=100)
     link = models.URLField()
-    id = models.UUIDField(primary_key=True)
+    id = models.BigIntegerField(primary_key=True)
     forum = models.CharField(max_length=100)
+    is_deleted = models.BooleanField()
+    is_spam = models.BooleanField()
+    is_closed = models.BooleanField()
 
     def __str__(self):
+        return self.title
+
+    def __unicode__(self):
         return self.title
 
     def __eq__(self, rhs):
@@ -90,7 +100,7 @@ class Post(DisqusBase):
     _meta = DisqusOptions()
 
     message = models.TextField()
-    id = models.UUIDField(primary_key=True)
+    id = models.BigIntegerField(primary_key=True)
     forum = models.CharField(max_length=100)
     is_spam = models.BooleanField()
     is_deleted = models.BooleanField()
@@ -111,4 +121,7 @@ class Post(DisqusBase):
         return not self.__eq__(rhs)
 
     def __str__(self):
-        return self.message if self.message else "Message is empty."
+        return self.message if self.message else "Message is empty. id is {id}".format(id=self.id)
+
+    def __unicode__(self):
+        return self.message if self.message else  "Message is empty. id is {id}".format(id=self.id)
