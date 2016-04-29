@@ -2,7 +2,6 @@ import requests
 from django.conf import settings
 
 
-# Needed in admin.main.get_queryset
 class DisqusQuery(object):
     select_related = False
     order_by = []
@@ -24,13 +23,19 @@ class DisqusQuery(object):
                             params={
                                 'api_secret': self.secret_key,
                                 'forum': self.forum,
-                                'include': ["unapproved", "approved", "spam", "deleted", "flagged", "highlighted"],
+                                'include': [
+                                    "unapproved",
+                                    "approved",
+                                    "spam",
+                                    "deleted",
+                                    "flagged",
+                                    "highlighted"
+                                ],
                             }).json()
 
     def get_post(self, post, *args, **kwargs):
         return requests.get('https://disqus.com/api/3.0/posts/details.json',
                             params={
                                 'api_secret': self.secret_key,
-#                                'forum': self.forum,
                                 'post': post
-                            }).json()            
+                            }).json()

@@ -3,19 +3,18 @@ import os
 
 import mock
 
-from django.conf import settings
 from django.test import TestCase
 
-from .models import Thread, Post
+from .models import Thread
 from disqus_interface import DisqusQuery
 
+
 TEST_DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_data')
+THREADS_TEST_DATA = json.load(open(os.path.join(TEST_DATA_DIR, 'threads_list.json'), 'r'))
+POST_TEST_DATA = json.load(open(os.path.join(TEST_DATA_DIR, 'posts_list.json'), 'r'))
 
-THREADS_TEST_DATA = json.load(open(os.path.join(TEST_DATA_DIR, 'threads_list.json'),'r'))
-POST_TEST_DATA = json.load(open(os.path.join(TEST_DATA_DIR, 'posts_list.json'),'r'))
 
-
-class DisqusThreadsAdminTest(TestCase):
+class DisqusThreadAdminTest(TestCase):
 
     def test_thread_model_in_change_list_view(self):
         response = self.client.get('/admin/disqus_backstore/thread/', follow=True)
@@ -24,6 +23,7 @@ class DisqusThreadsAdminTest(TestCase):
     def test_post_model_in_change_list_view(self):
         response = self.client.get('/admin/disqus_backstore/post/', follow=True)
         self.assertEqual(response.status_code, 200)
+
 
 class DisqusThreadQuerySetTest(TestCase):
 
