@@ -32,6 +32,12 @@ class DisqusQuery(object):
                                     "highlighted"
                                 ],
                             }).json()
+    def get_thread(self, thread, *args, **kwargs):
+        return requests.get('https://disqus.com/api/3.0/threads/details.json',
+                            params={
+                                'api_secret': self.secret_key,
+                                'thread': thread
+                            }).json()
 
     def get_post(self, post, *args, **kwargs):
         return requests.get('https://disqus.com/api/3.0/posts/details.json',
