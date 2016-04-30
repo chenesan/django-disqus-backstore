@@ -7,7 +7,7 @@ class PostAdmin(admin.ModelAdmin):
 
 
 class ThreadAdmin(admin.ModelAdmin):
-    list_display = ['title', 'link']
+    list_display = ['id', 'title', 'link', 'forum']
 
 admin.site.register([Thread], ThreadAdmin)
 admin.site.register([Post], PostAdmin)
