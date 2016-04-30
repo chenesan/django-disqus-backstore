@@ -9,7 +9,6 @@ class DisqusQuerySet(object):
         self.query = query or DisqusQuery()
         if using:
             self.using = using
-        self.rawdata = []
         self.data = []
         self._prefetch_related_lookups = []
 
@@ -45,7 +44,6 @@ class DisqusQuerySet(object):
 
     def _clone(self, **kwargs):
         clone = self.__class__()
-        clone.rawdata = copy.deepcopy(self.rawdata)
         clone.data = copy.deepcopy(self.data)
         return clone
 
@@ -73,7 +71,7 @@ class ThreadQuerySet(DisqusQuerySet):
 
     def filter(self, *args, **kwargs):
         if not getattr(self, 'rawdata', None):
-            self.rawdata = self.query.get_threads_list()
+            rawdata = self.query.get_threads_list()
         self.data = [self.create(
             id=int(thread.get('id')),
             title=thread.get('title'),
@@ -82,7 +80,7 @@ class ThreadQuerySet(DisqusQuerySet):
             is_deleted=thread.get('isDeleted'),
             is_closed=thread.get('isClosed'),
             is_spam=thread.get('isSpam'),
-        ) for thread in self.rawdata['response']]
+        ) for thread in rawdata['response']]
         return self
 
 
@@ -109,8 +107,8 @@ class PostQuerySet(DisqusQuerySet):
 
     def filter(self, *args, **kwargs):
         if not getattr(self, 'rawdata', None):
-            self.rawdata = self.query.get_posts_list()
-        for post in self.rawdata['response']:
+            rawdata = self.query.get_posts_list()
+        for post in rawdata['response']:
             thread_field = self.model._meta.get_field('thread')
             thread = thread_field.remote_field.model.objects.get(id=post['thread'])
             obj = self.create(
