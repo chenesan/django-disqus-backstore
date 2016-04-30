@@ -22,15 +22,13 @@ class ThreadQuerySet(object):
         return self
 
     def get(self, *args, **kwargs):
-        params = dict()
-        for k, v in kwargs.items():
-            if k == 'id':
-                params['thread'] = v
-            else:
-                params[k] = v
-        rawdata = self.query.get_threads_list(**params)['response']
+        kwargs['thread'] = kwargs.pop('id')
+        rawdata = self.query.get_threads_list(**kwargs)['response']
         if len(rawdata) > 2:
-            raise RuntimeError("There are more than two objects.")
+            raise self.model.MultipleObjectsReturned(
+            "get() returned more than one %s -- it returned %s!" %
+            (self.model._meta.object_name, len(rawdata))
+        )
         elif len(rawdata) == 1:
             thread = rawdata[0]
             return self.create(
@@ -105,8 +103,13 @@ class PostQuerySet(object):
         return self
 
     def get(self, *args, **kwargs):
-        post_id = kwargs['id']
-        post = self.query.get_post(post_id)['response']
+        """
+        Because there's no "post" argument in diqus fourm/listPost API
+        (But there's "thread" argument in forum/listThread API!),
+        we have to use posts/details API to get single post..
+        """
+        post_id = kwargs.pop('id')
+        post = self.query.get_post(post_id, **kwargs)['response']
         thread = self.model._meta.get_field('thread').remote_field.model.objects.get(id=post['thread'])
         return self.create(
             id=int(post.get('id')),
