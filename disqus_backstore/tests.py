@@ -34,12 +34,20 @@ class DisqusAdminTest(TestCase):
         self.factory = RequestFactory()
 
     def test_thread_model_in_change_list_view(self):
-        response = self.client.get('/admin/disqus_backstore/thread/', follow=True)
-        self.assertEqual(response.status_code, 200)
+        with mock.patch.object(DisqusQuery, 'get_threads_list', return_value=THREADS_LIST_RESPONSE):
+            request = self.factory.get('/admin/disqus_backstore/thread/', follow=True)
+            request.user = MockSuperUser()
+            response = ThreadAdmin(Thread, admin.site).changelist_view(request)
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue("admin/change_list.html" in response.template_name)
 
     def test_post_model_in_change_list_view(self):
-        response = self.client.get('/admin/disqus_backstore/post/', follow=True)
-        self.assertEqual(response.status_code, 200)
+        with mock.patch.object(DisqusQuery, 'get_posts_list', return_value=POSTS_LIST_RESPONSE):
+            request = self.factory.get('/admin/disqus_backstore/post/', follow=True)
+            request.user = MockSuperUser()
+            response = PostAdmin(Post, admin.site).changelist_view(request)
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue("admin/change_list.html" in response.template_name)
 
     def test_thread_model_in_change_form_view(self):
         with mock.patch.object(DisqusQuery, 'get_threads_list', return_value=SINGLE_THREAD_LIST_RESPONSE):
