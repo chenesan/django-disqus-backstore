@@ -47,10 +47,21 @@ class DisqusQuerySet(object):
         clone.data = copy.deepcopy(self.data)
         return clone
 
+    def exists(self):
+        print self.data
+        return bool(self.data)
+
+    def exclude(self, *args, **kwargs):
+        pk = kwargs.pop('pk', None)
+        if pk:
+            for d in self.data:
+                if d.id == pk:
+                    self.data.remove(d)
+        return self
 
 class ThreadQuerySet(DisqusQuerySet):
     def get(self, *args, **kwargs):
-        kwargs['thread'] = kwargs.pop('id')
+        kwargs['thread'] = kwargs.pop('id', None)
         rawdata = self.query.get_threads_list(**kwargs)['response']
         if len(rawdata) > 2:
             raise self.model.MultipleObjectsReturned(
@@ -59,7 +70,7 @@ class ThreadQuerySet(DisqusQuerySet):
             )
         elif len(rawdata) == 1:
             thread = rawdata[0]
-            return self.create(
+            obj = self.create(
                 id=int(thread.get('id')),
                 title=thread.get('title'),
                 link=thread.get('link'),
@@ -68,6 +79,9 @@ class ThreadQuerySet(DisqusQuerySet):
                 is_closed=thread.get('isClosed'),
                 is_spam=thread.get('isSpam'),
             )
+            obj._state.adding = False
+            self.data.append(obj)
+            return obj
 
     def filter(self, *args, **kwargs):
         if not getattr(self, 'rawdata', None):
@@ -81,7 +95,32 @@ class ThreadQuerySet(DisqusQuerySet):
             is_closed=thread.get('isClosed'),
             is_spam=thread.get('isSpam'),
         ) for thread in rawdata['response']]
+        # Dirty hack for unique check in admin changeform view
+        for obj in self.data:
+            obj._state.adding = False
+        pk = kwargs.pop('id', None)
+        if pk:
+            for thread in self.data:
+                if thread.id == pk:
+                    self.data = [thread]
+                    break
+            if self.data[0].id != pk:
+                self.data = []
         return self
+
+    def _update(self, new_instance):
+        old_instance = self.get(id=new_instance.id)
+        fields = self.model._meta.get_fields()
+        print fields
+        for f in fields:
+            attname = getattr(f, 'attname', None)
+            if attname:
+                old_val = getattr(old_instance, f.attname)
+                new_val = getattr(new_instance, f.attname)
+                if old_val != new_val:
+                    update_func = getattr(self.query, 'change_thread_'+attname)
+                    result = update_func(new_instance.id, old_val, new_val)
+                    print result
 
 
 class PostQuerySet(DisqusQuerySet):
@@ -95,7 +134,7 @@ class PostQuerySet(DisqusQuerySet):
         post = self.query.get_post(post_id, **kwargs)['response']
         thread_field = self.model._meta.get_field('thread')
         thread = thread_field.remote_field.model.objects.get(id=post['thread'])
-        return self.create(
+        obj = self.create(
             id=int(post.get('id')),
             forum=post.get('forum'),
             is_approved=post.get('isApproved'),
@@ -104,6 +143,9 @@ class PostQuerySet(DisqusQuerySet):
             message=post.get('raw_message'),
             thread=thread,
         )
+        obj._state.adding = False
+        self.data.append(obj)
+        return obj
 
     def filter(self, *args, **kwargs):
         if not getattr(self, 'rawdata', None):
@@ -121,4 +163,15 @@ class PostQuerySet(DisqusQuerySet):
                 thread=thread,
             )
             self.data.append(obj)
+        # Dirty hack for admin.changeform_view
+        for obj in self.data:
+            obj._state.adding = False
+        pk = kwargs.pop('id', None)
+        if pk:
+            for thread in self.data:
+                if thread.id == pk:
+                    self.data = [thread]
+                    break
+            if self.data[0].id != pk:
+                self.data = []
         return self

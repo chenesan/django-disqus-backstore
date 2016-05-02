@@ -16,6 +16,10 @@ class Thread(models.Model):
     link = models.URLField()
     title = models.CharField(max_length=100)
 
+    def save(self, force_insert=False, force_update=False, using=None,
+             update_fields=None):
+        self.__class__._default_manager._update(self)
+
     def __eq__(self, rhs):
         return self.id == rhs.id
 
@@ -39,6 +43,10 @@ class Post(models.Model):
     is_spam = models.BooleanField()
     message = models.TextField(blank=True)
     thread = models.ForeignKey(Thread)
+
+    def save(self, force_insert=False, force_update=False, using=None,
+             update_fields=None):
+        pass
 
     def __eq__(self, rhs):
         return self.id == rhs.id
