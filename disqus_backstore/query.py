@@ -77,7 +77,6 @@ class ThreadQuerySet(DisqusQuerySet):
                 forum=thread.get('forum'),
                 is_deleted=thread.get('isDeleted'),
                 is_closed=thread.get('isClosed'),
-                is_spam=thread.get('isSpam'),
             )
             obj._state.adding = False
             self.data.append(obj)
@@ -93,7 +92,6 @@ class ThreadQuerySet(DisqusQuerySet):
             forum=thread.get('forum'),
             is_deleted=thread.get('isDeleted'),
             is_closed=thread.get('isClosed'),
-            is_spam=thread.get('isSpam'),
         ) for thread in rawdata['response']]
         # Dirty hack for unique check in admin changeform view
         for obj in self.data:
@@ -121,7 +119,6 @@ class ThreadQuerySet(DisqusQuerySet):
                     update_func = getattr(self.query, 'change_thread_'+attname)
                     result = update_func(new_instance.id, old_val, new_val)
                     print result
-
 
 class PostQuerySet(DisqusQuerySet):
     def get(self, *args, **kwargs):

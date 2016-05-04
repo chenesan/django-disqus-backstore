@@ -12,7 +12,6 @@ class Thread(models.Model):
     id = models.BigIntegerField(primary_key=True)
     is_closed = models.BooleanField()
     is_deleted = models.BooleanField()
-    is_spam = models.BooleanField()
     link = models.URLField()
     title = models.CharField(max_length=100)
 
