@@ -6,8 +6,11 @@ from .manager import ThreadManager, PostManager
 
 
 class Thread(models.Model):
-    objects = ThreadManager()
-
+    #objects = ThreadManager()
+    _base_manager = ThreadManager()
+    _default_manager = _base_manager
+    objects = _default_manager
+    
     forum = models.CharField(max_length=100)
     id = models.BigIntegerField(primary_key=True)
     is_closed = models.BooleanField()
@@ -15,9 +18,12 @@ class Thread(models.Model):
     link = models.URLField()
     title = models.CharField(max_length=100)
 
+    def delete(self, using=None, keep_parents=False):
+        self.__class__._default_manager.delete(self)        
+    
     def save(self, force_insert=False, force_update=False, using=None,
              update_fields=None):
-        self.__class__._default_manager._update(self)
+        self.__class__._default_manager.update(self)
 
     def __eq__(self, rhs):
         return self.id == rhs.id
@@ -33,8 +39,13 @@ class Thread(models.Model):
 
 
 class Post(models.Model):
-    objects = PostManager()
-
+    #objects = PostManager()
+    #_base_manager = PostManager()
+    #_default_manager = PostManager()
+    _base_manager = PostManager()
+    _default_manager = _base_manager
+    objects = _default_manager
+    
     forum = models.CharField(max_length=100)
     id = models.BigIntegerField(primary_key=True)
     is_approved = models.BooleanField()
