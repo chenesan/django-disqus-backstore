@@ -70,3 +70,19 @@ class DisqusQuery(object):
                                  'thread': thread,
                                  'access_token': self.access_token
                              }).json()
+
+    def delete_thread(self, thread):
+        return requests.post('https://disqus.com/api/3.0/threads/remove.json',
+                            params={
+                                'api_secret': self.secret_key,
+                                'thread': thread,
+                                'access_token': self.access_token
+                            }).json()
+
+    def recover_thread(self, thread):
+        return requests.post('https://disqus.com/api/3.0/threads/restore.json',
+                             params={
+                                 'api_secret': self.secret_key,
+                                 'thread': thread,
+                                 'access_token': self.access_token
+                             }).json()

@@ -85,6 +85,7 @@ class DisqusAdminTest(TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertTrue("admin/change_form.html" in response.template_name)
 
+
 class DisqusThreadQuerySetTest(TestCase):
 
     def test_thread_queryset_get(self):

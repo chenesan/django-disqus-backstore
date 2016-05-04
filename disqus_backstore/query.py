@@ -43,12 +43,11 @@ class DisqusQuerySet(object):
         return self.data[i]
 
     def _clone(self, **kwargs):
-        clone = self.__class__()
+        clone = self.__class__(model=self.model, query=self.query, using=self.using)
         clone.data = copy.deepcopy(self.data)
         return clone
 
     def exists(self):
-        print self.data
         return bool(self.data)
 
     def exclude(self, *args, **kwargs):
@@ -58,6 +57,10 @@ class DisqusQuerySet(object):
                 if d.id == pk:
                     self.data.remove(d)
         return self
+
+    def select_related(self, *fields):
+        obj = self._clone()
+        return obj
 
 class ThreadQuerySet(DisqusQuerySet):
     def get(self, *args, **kwargs):
@@ -106,10 +109,12 @@ class ThreadQuerySet(DisqusQuerySet):
                 self.data = []
         return self
 
-    def _update(self, new_instance):
+    def delete(self, obj):
+        self.query.delete_thread(obj.id)
+
+    def update(self, new_instance):
         old_instance = self.get(id=new_instance.id)
         fields = self.model._meta.get_fields()
-        print fields
         for f in fields:
             attname = getattr(f, 'attname', None)
             if attname:
@@ -145,8 +150,7 @@ class PostQuerySet(DisqusQuerySet):
         return obj
 
     def filter(self, *args, **kwargs):
-        if not getattr(self, 'rawdata', None):
-            rawdata = self.query.get_posts_list()
+        rawdata = self.query.get_posts_list()
         for post in rawdata['response']:
             thread_field = self.model._meta.get_field('thread')
             thread = thread_field.remote_field.model.objects.get(id=post['thread'])
