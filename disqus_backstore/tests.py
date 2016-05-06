@@ -109,9 +109,25 @@ class DisqusAdminTest(TestCase):
             request.user = MockSuperUser()
 
             response = ThreadAdmin(Thread, admin.site).change_view(request, thread_data['id'])
+            # what to test:
+            # 1. template is admin/change_form.html and its subclass template
+            # 2. status code 200
+            # 3. thread object id is equal to the form bounded value
+            # (So they are the same one.)
+            # They should be tested together
 
+            # All objects
+            template_names = set([
+                'admin/change_form.html',
+                'admin/disqus_backstore/change_form.html',
+                'admin/disqus_backstore/thread/change_form.html',
+            ])
             self.assertEqual(response.status_code, 200)
-            self.assertTrue("admin/change_form.html" in response.template_name)
+            self.assertEqual(set(response.template_name), template_names)
+            self.assertEqual(
+                response.context_data['adminform'].form['id'].value(),
+                thread_object.id
+            )
 
     def test_post_change_form_view__normal_case__correct_template_response(self):
         with mock.patch.object(DisqusQuery, 'get_post', return_value=POST_DETAIL_RESPONSE):
@@ -121,8 +137,17 @@ class DisqusAdminTest(TestCase):
             request.user = MockSuperUser()
 
             response = PostAdmin(Post, admin.site).change_view(request, post_data['id'])
+            template_names = set([
+                'admin/change_form.html',
+                'admin/disqus_backstore/change_form.html',
+                'admin/disqus_backstore/post/change_form.html',
+            ])
             self.assertEqual(response.status_code, 200)
-            self.assertTrue("admin/change_form.html" in response.template_name)
+            self.assertEqual(set(response.template_name), template_names)
+            self.assertEqual(
+                response.context_data['adminform'].form['id'].value(),
+                post_object.id
+            )
 
 
 class DisqusThreadQuerySetTest(TestCase):
