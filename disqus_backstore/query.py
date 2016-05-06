@@ -36,17 +36,6 @@ class DisqusQuerySet(object):
         clone._db = alias
         return clone
 
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, i):
-        return self.data[i]
-
-    def _clone(self, **kwargs):
-        clone = self.__class__(model=self.model, query=self.query, using=self.using)
-        clone.data = copy.deepcopy(self.data)
-        return clone
-
     def exists(self):
         return bool(self.data)
 
@@ -61,6 +50,21 @@ class DisqusQuerySet(object):
     def select_related(self, *fields):
         obj = self._clone()
         return obj
+
+    def __eq__(self, qs):
+        return set(self.data) == set(qs.data)
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, i):
+        return self.data[i]
+
+    def _clone(self, **kwargs):
+        clone = self.__class__(model=self.model, query=self.query, using=self.using)
+        clone.data = copy.deepcopy(self.data)
+        return clone
+
 
 class ThreadQuerySet(DisqusQuerySet):
     def get(self, *args, **kwargs):
@@ -86,8 +90,7 @@ class ThreadQuerySet(DisqusQuerySet):
             return obj
 
     def filter(self, *args, **kwargs):
-        if not getattr(self, 'rawdata', None):
-            rawdata = self.query.get_threads_list()
+        rawdata = self.query.get_threads_list()
         self.data = [self.create(
             id=int(thread.get('id')),
             title=thread.get('title'),

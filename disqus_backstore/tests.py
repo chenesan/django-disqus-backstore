@@ -17,6 +17,27 @@ POSTS_LIST_RESPONSE = json.load(open(os.path.join(TEST_DATA_DIR, 'posts_list.jso
 POST_DETAIL_RESPONSE = json.load(open(os.path.join(TEST_DATA_DIR, 'post_detail.json'), 'r'))
 SINGLE_THREAD_LIST_RESPONSE =  json.load(open(os.path.join(TEST_DATA_DIR, 'single_thread_list.json'), 'r'))
 
+def thread_factory(thread_data):
+    thread = Thread.objects.create(
+        id=int(thread_data.get('id')),
+        forum=thread_data.get('forum'),
+        is_closed=thread_data.get('isClosed'),
+        is_deleted=thread_data.get('isDeleted'),
+        title=thread_data.get('title'),
+    )
+    return thread
+
+def post_factory(post_data):
+    post = Post.objects.create(
+        id=int(post_data.get('id')),
+        forum=post_data.get('forum'),
+        is_approved=post_data.get('isApproved'),
+        is_deleted=post_data.get('isDeleted'),
+        is_spam=post_data.get('isSpam'),
+        message=post_data.get('raw_message'),
+    )
+    return post
+
 class MockSuperUser(object):
     is_active = True
     is_staff = True
@@ -30,70 +51,87 @@ class MockSuperUser(object):
 
 class DisqusAdminTest(TestCase):
 
-    def setUp(self):
-        self.factory = RequestFactory()
-
-    def test_thread_model_in_change_list_view(self):
+    def test_thread_change_list_view__normal_case__correct_template_response(self):
         with mock.patch.object(DisqusQuery, 'get_threads_list', return_value=THREADS_LIST_RESPONSE):
-            request = self.factory.get('/admin/disqus_backstore/thread/', follow=True)
+            request = RequestFactory().get('/admin/disqus_backstore/thread/', follow=True)
             request.user = MockSuperUser()
+
             response = ThreadAdmin(Thread, admin.site).changelist_view(request)
-            self.assertEqual(response.status_code, 200)
-            self.assertTrue("admin/change_list.html" in response.template_name)
 
-    def test_post_model_in_change_list_view(self):
+            # what to test:
+            # 1. template is admin/change_list.html and its subclass template
+            # 2. status code 200
+            # 3. thread objects == response
+            # They should be tested together
+
+            # All objects
+            qs = Thread.objects.filter()
+            template_names = set([
+                'admin/change_list.html',
+                'admin/disqus_backstore/change_list.html',
+                'admin/disqus_backstore/thread/change_list.html',
+            ])
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(set(response.template_name), template_names)
+            self.assertEqual(response.context_data['cl'].result_list, qs)
+
+    def test_post_change_list_view__normal_case__correct_template_response(self):
         with mock.patch.object(DisqusQuery, 'get_posts_list', return_value=POSTS_LIST_RESPONSE):
-            request = self.factory.get('/admin/disqus_backstore/post/', follow=True)
+            request = RequestFactory().get('/admin/disqus_backstore/post/', follow=True)
             request.user = MockSuperUser()
-            response = PostAdmin(Post, admin.site).changelist_view(request)
-            self.assertEqual(response.status_code, 200)
-            self.assertTrue("admin/change_list.html" in response.template_name)
 
-    def test_thread_model_in_change_form_view(self):
+            response = PostAdmin(Post, admin.site).changelist_view(request)
+
+            # what to test:
+            # 1. template is admin/change_list.html and its subclass template
+            # 2. status code 200
+            # 3. thread objects == response
+            # They should be tested together
+
+            # All objects
+            qs = Post.objects.filter()
+            template_names = set([
+                'admin/change_list.html',
+                'admin/disqus_backstore/change_list.html',
+                'admin/disqus_backstore/post/change_list.html',
+            ])
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(set(response.template_name), template_names)
+            self.assertEqual(response.context_data['cl'].result_list, qs)
+
+    def test_thread_change_form_view__normal_case__correct_template_response(self):
         with mock.patch.object(DisqusQuery, 'get_threads_list', return_value=SINGLE_THREAD_LIST_RESPONSE):
-            thread_id = SINGLE_THREAD_LIST_RESPONSE['response'][0]['id']
-            thread = DisqusQuery().get_threads_list(thread=thread_id)['response'][0]
-            Thread.objects.create(
-                id=int(thread.get('id')),
-                forum=thread.get('forum'),
-                is_closed=thread.get('isClosed'),
-                is_deleted=thread.get('isDeleted'),
-                is_spam=thread.get('isSpam'),
-                title=thread.get('title'),
-            )
-            request = self.factory.get('/admin/disqus_backstore/thread/{id}/change/'.format(id=thread_id), follow=True)
+            thread_data = SINGLE_THREAD_LIST_RESPONSE['response'][0]
+            thread_object = thread_factory(thread_data)
+            request = RequestFactory().get('/admin/disqus_backstore/thread/{id}/change/'.format(id=thread_object.id), follow=True)
             request.user = MockSuperUser()
-            response = ThreadAdmin(Thread, admin.site).change_view(request, thread_id)
+
+            response = ThreadAdmin(Thread, admin.site).change_view(request, thread_data['id'])
+
             self.assertEqual(response.status_code, 200)
             self.assertTrue("admin/change_form.html" in response.template_name)
 
-    def test_post_model_in_change_form_view(self):
+    def test_post_change_form_view__normal_case__correct_template_response(self):
         with mock.patch.object(DisqusQuery, 'get_post', return_value=POST_DETAIL_RESPONSE):
-            post_id = POST_DETAIL_RESPONSE['response']['id']
-            post = DisqusQuery().get_post(post_id)['response']
-            Post.objects.create(
-                id=int(post.get('id')),
-                forum=post.get('forum'),
-                is_approved=post.get('isApproved'),
-                is_deleted=post.get('isDeleted'),
-                is_spam=post.get('isSpam'),
-                message=post.get('raw_message'),
-            )
-            request = self.factory.get('/admin/disqus_backstore/post/2626306299/change/', follow=True)
+            post_data = POST_DETAIL_RESPONSE['response']
+            post_object = post_factory(post_data)
+            request = RequestFactory().get('/admin/disqus_backstore/post/{id}/change/'.format(id=post_object.id), follow=True)
             request.user = MockSuperUser()
-            response = PostAdmin(Post, admin.site).change_view(request, post['id'])
+
+            response = PostAdmin(Post, admin.site).change_view(request, post_data['id'])
             self.assertEqual(response.status_code, 200)
             self.assertTrue("admin/change_form.html" in response.template_name)
 
 
 class DisqusThreadQuerySetTest(TestCase):
 
-    def test_thread_queryset_get(self):
-        with mock.patch.object(DisqusQuery, 'get_threads_list', return_value=THREADS_LIST_RESPONSE):
-            all_qs = Thread.objects.filter()
-
-        obj = all_qs[0]
+    def test_get__normal_case__get_object_successfully(self):
+        thread_data = THREADS_LIST_RESPONSE['response'][0]
+        thread_id = int(thread_data.get('id'))
         with mock.patch.object(DisqusQuery, 'get_threads_list', return_value={
-                'response': [THREADS_LIST_RESPONSE['response'][0]]
+                'response': [thread_data,]
         }):
-            self.assertEqual(obj, Thread.objects.get(id=obj.id))
+            obj = Thread.objects.get(id=thread_id)
+            self.assertEqual(obj.id, thread_id)
