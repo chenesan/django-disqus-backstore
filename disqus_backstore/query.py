@@ -20,7 +20,7 @@ class Query(object):
 
 def get_thread_from_thread_list(id, thread_list):
     for thread in thread_list:
-        if thread.id == id:
+        if str(thread.id) == id:
             return thread
     return None
 
@@ -30,6 +30,14 @@ def meet_querys(data, query_objs):
             if q.negate and data['id'] == str(q.value):
                 return False
             elif not q.negate and data['id'] != str(q.value):
+                return False
+        # It's a dirty workaround for thread delete view to filter Post
+        # We should have a class to parse the filter string used in admin
+        if q.query_string == 'thread__in':
+            thread_ids = [str(obj.id) for obj in q.value]
+            if q.negate and data['thread'] in thread_ids:
+                return False
+            elif not q.negate and data['thread'] not in thread_ids:
                 return False
     return True
 

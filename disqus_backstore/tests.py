@@ -1,10 +1,16 @@
+from __future__ import unicode_literals
+
 import json
 import os
 
 import mock
 
 from django.contrib import admin
+from django.contrib.admin.utils import quote
 from django.test import TestCase, RequestFactory
+from django.urls import reverse
+from django.utils.html import format_html
+from django.utils.text import capfirst
 
 from .admin import ThreadAdmin, PostAdmin
 from .models import Thread, Post
@@ -153,15 +159,42 @@ class DisqusAdminTest(TestCase):
             post_object.id
         )
         
-    @mock.patch.object(DisqusQuery, 'get_threads_list', return_value=SINGLE_THREAD_LIST_RESPONSE)
-    def test_thread_change_form_view__delete__success(self, _):
-        thread_data = SINGLE_THREAD_LIST_RESPONSE['response'][0]
+    @mock.patch.object(DisqusQuery, 'get_threads_list', return_value=THREADS_LIST_RESPONSE)
+    @mock.patch.object(DisqusQuery, 'get_posts_list', return_value=POSTS_LIST_RESPONSE)
+    def test_thread_change_form_view__delete__success(self, _, __):
+        thread_data = THREADS_LIST_RESPONSE['response'][0]
+        post_data = POSTS_LIST_RESPONSE['response'][0]
         thread_object = thread_factory(thread_data)
-        request = RequestFactory().get('/admin/disqus_backstore/thread/{id}/change/'.format(id=thread_object.id), follow=True)
+        related_post_object = post_factory(post_data)
+        related_post_object.thread = thread_object
+        request = RequestFactory().get('/admin/disqus_backstore/thread/{id}/delete/'.format(id=thread_object.id), follow=True)
         request.user = MockSuperUser()
 
-        response = ThreadAdmin(Thread, admin.site).delete_view(request, thread_data['id'])        
+        response = ThreadAdmin(Thread, admin.site).delete_view(request, thread_data['id'])
+        #import pdb;pdb.set_trace()
+        template_names = set([
+            'admin/delete_confirmation.html',
+            'admin/disqus_backstore/delete_confirmation.html',
+            'admin/disqus_backstore/thread/delete_confirmation.html',
+        ])
+        
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(set(response.template_name), template_names)
+        # dirty hack for formatting deleted_object context... Use the same formatting
+        # in django.contrib.admin.utils.get_deleted_objects
+        # the related post objects will be a list of post object,
+        # so we have to put it into a list...
+        deleted_objects = [format_html('{}: <a href="{}">{}</a>',
+                                       capfirst(obj.__class__._meta.verbose_name),
+                                       reverse('%s:%s_%s_change'%(
+                                           admin.site.name,
+                                           obj._meta.app_label,
+                                           obj._meta.model_name
+                                       ), None, (quote(obj._get_pk_val()),)),
+                                       obj) for obj in [thread_object, related_post_object]]
+        deleted_objects[1] = [deleted_objects[1]]
+        self.assertEqual(sorted(response.context_data['deleted_objects']),
+                         sorted(deleted_objects))
 
 class DisqusThreadQuerySetTest(TestCase):
 
