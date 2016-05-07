@@ -152,7 +152,16 @@ class DisqusAdminTest(TestCase):
             response.context_data['adminform'].form['id'].value(),
             post_object.id
         )
+        
+    @mock.patch.object(DisqusQuery, 'get_threads_list', return_value=SINGLE_THREAD_LIST_RESPONSE)
+    def test_thread_change_form_view__delete__success(self, _):
+        thread_data = SINGLE_THREAD_LIST_RESPONSE['response'][0]
+        thread_object = thread_factory(thread_data)
+        request = RequestFactory().get('/admin/disqus_backstore/thread/{id}/change/'.format(id=thread_object.id), follow=True)
+        request.user = MockSuperUser()
 
+        response = ThreadAdmin(Thread, admin.site).delete_view(request, thread_data['id'])        
+        self.assertEqual(response.status_code, 200)
 
 class DisqusThreadQuerySetTest(TestCase):
 
