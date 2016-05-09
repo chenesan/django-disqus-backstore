@@ -7,6 +7,9 @@ import mock
 
 from django.contrib import admin
 from django.contrib.admin.utils import quote
+from django.contrib.auth import get_permission_codename
+from django.contrib.auth.models import User, Permission
+from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase, RequestFactory
 from django.urls import reverse
 from django.utils.html import format_html
@@ -22,6 +25,11 @@ THREADS_LIST_RESPONSE = json.load(open(os.path.join(TEST_DATA_DIR, 'threads_list
 POSTS_LIST_RESPONSE = json.load(open(os.path.join(TEST_DATA_DIR, 'posts_list.json'), 'r'))
 POST_DETAIL_RESPONSE = json.load(open(os.path.join(TEST_DATA_DIR, 'post_detail.json'), 'r'))
 SINGLE_THREAD_LIST_RESPONSE =  json.load(open(os.path.join(TEST_DATA_DIR, 'single_thread_list.json'), 'r'))
+
+def get_perm(Model, perm):
+    """Return the permission object, for the Model"""
+    ct = ContentType.objects.get_for_model(Model)
+    return Permission.objects.get(content_type=ct, codename=perm)
 
 def thread_factory(thread_data):
     thread = Thread.objects.create(
@@ -158,10 +166,10 @@ class DisqusAdminTest(TestCase):
             response.context_data['adminform'].form['id'].value(),
             post_object.id
         )
-        
+
     @mock.patch.object(DisqusQuery, 'get_threads_list', return_value=THREADS_LIST_RESPONSE)
     @mock.patch.object(DisqusQuery, 'get_posts_list', return_value=POSTS_LIST_RESPONSE)
-    def test_thread_change_form_view__delete__success(self, _, __):
+    def test_thread_delete_view__get__success(self, _, __):
         thread_data = THREADS_LIST_RESPONSE['response'][0]
         post_data = POSTS_LIST_RESPONSE['response'][0]
         thread_object = thread_factory(thread_data)
@@ -171,13 +179,12 @@ class DisqusAdminTest(TestCase):
         request.user = MockSuperUser()
 
         response = ThreadAdmin(Thread, admin.site).delete_view(request, thread_data['id'])
-        #import pdb;pdb.set_trace()
         template_names = set([
             'admin/delete_confirmation.html',
             'admin/disqus_backstore/delete_confirmation.html',
             'admin/disqus_backstore/thread/delete_confirmation.html',
         ])
-        
+
         self.assertEqual(response.status_code, 200)
         self.assertEqual(set(response.template_name), template_names)
         # dirty hack for formatting deleted_object context... Use the same formatting
@@ -195,6 +202,51 @@ class DisqusAdminTest(TestCase):
         deleted_objects[1] = [deleted_objects[1]]
         self.assertEqual(sorted(response.context_data['deleted_objects']),
                          sorted(deleted_objects))
+
+    @mock.patch.object(DisqusQuery, 'delete_thread')
+    @mock.patch.object(Post, 'delete')
+    @mock.patch.object(DisqusQuery, 'get_threads_list', return_value=THREADS_LIST_RESPONSE)
+    @mock.patch.object(DisqusQuery, 'get_posts_list', return_value=POSTS_LIST_RESPONSE)
+    def test_thread_delete_view__post__success(self, _, __, delete_post_mock, delete_thread_mock):
+        thread_data = THREADS_LIST_RESPONSE['response'][0]
+        post_data = POSTS_LIST_RESPONSE['response'][0]
+        thread_object = thread_factory(thread_data)
+        related_post_object = post_factory(post_data)
+        related_post_object.thread = thread_object
+        # The way to create user is as same as the way in
+        # `django.tests.admin_view.tests.AdminViewPermissionTests.test_delete_view`
+        # Because RequestFactory can't handle MiddleWare,
+        # even we set the `request._dont_enforce_csrf_checks to prevent csrf token check
+        # We still need to handle the message for MessageMiddleWare used in admin view.
+        # Workaround for this will make test code hard to understand.
+        # So here I choose test it directly with `self.client`
+        deleteuser = User.objects.create_user(
+            username='deleteuser',
+            password='secret',
+            is_staff=True
+        )
+        deleteuser.user_permissions.add(
+            get_perm(
+                Thread,
+                get_permission_codename('delete', Thread._meta)
+            )
+        )
+        deleteuser.user_permissions.add(
+            get_perm(
+                Post,
+                get_permission_codename('delete', Post._meta)
+            )
+        )
+        self.client.force_login(deleteuser)
+        delete_url, delete_dict = '/admin/disqus_backstore/thread/{id}/delete/'.format(id=thread_object.id), {'post':'yes'}
+
+        response = self.client.post(delete_url, delete_dict)
+
+        self.assertEqual(response.status_code, 302)
+        delete_thread_mock.assert_called_once_with(thread_object.id)
+        # Should delete related post.
+        delete_post_mock.assert_called_once()
+
 
 class DisqusThreadQuerySetTest(TestCase):
 
