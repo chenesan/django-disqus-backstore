@@ -147,7 +147,7 @@ class DisqusAdminTest(TestCase):
         )
 
     @mock.patch.object(DisqusQuery, 'get_threads_list', return_value=THREADS_LIST_RESPONSE)
-    @mock.patch.object(DisqusQuery, 'get_post', return_value=POST_DETAIL_RESPONSE)
+    @mock.patch.object(DisqusQuery, 'get_posts_list', return_value=POSTS_LIST_RESPONSE)
     def test_post_change_form_view__normal_case__correct_template_response(self, _, __):
         post_data = POST_DETAIL_RESPONSE['response']
         post_object = post_factory(post_data)
@@ -204,10 +204,10 @@ class DisqusAdminTest(TestCase):
                          sorted(deleted_objects))
 
     @mock.patch.object(DisqusQuery, 'delete_thread')
-    @mock.patch.object(Post, 'delete')
+    @mock.patch.object(DisqusQuery, 'delete_posts')
     @mock.patch.object(DisqusQuery, 'get_threads_list', return_value=THREADS_LIST_RESPONSE)
     @mock.patch.object(DisqusQuery, 'get_posts_list', return_value=POSTS_LIST_RESPONSE)
-    def test_thread_delete_view__post__success(self, _, __, delete_post_mock, delete_thread_mock):
+    def test_thread_delete_view__post__success(self, _, __, delete_posts_mock, delete_thread_mock):
         thread_data = THREADS_LIST_RESPONSE['response'][0]
         post_data = POSTS_LIST_RESPONSE['response'][0]
         thread_object = thread_factory(thread_data)
@@ -244,8 +244,7 @@ class DisqusAdminTest(TestCase):
 
         self.assertEqual(response.status_code, 302)
         delete_thread_mock.assert_called_once_with(thread_object.id)
-        # Should delete related post.
-        delete_post_mock.assert_called_once()
+        delete_posts_mock.assert_called_once()
 
 
 class DisqusThreadQuerySetTest(TestCase):

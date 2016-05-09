@@ -202,6 +202,11 @@ class ThreadQuerySet(DisqusQuerySet):
         self._iterable_class = ThreadIterable
 
     def delete(self, obj):
+        # Have to remove posts at first
+        posts_list = self.query.get_posts_list(thread_id=obj.id)['response']
+        post_ids = [post['id'] for post in posts_list]
+        self.query.delete_posts(post_ids)
+
         self.query.delete_thread(obj.id)
 
     def update(self, new_instance):
