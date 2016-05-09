@@ -31,9 +31,6 @@ class Thread(models.Model):
     def __ne__(self, rhs):
         return not self.__eq__(rhs)
 
-    def __str__(self):
-        return self.title
-
     def __unicode__(self):
         return self.title
 
@@ -63,9 +60,6 @@ class Post(models.Model):
 
     def __ne__(self, rhs):
         return not self.__eq__(rhs)
-
-    def __str__(self):
-        return self.message if self.message else "Empty message"
 
     def __unicode__(self):
         return self.message if self.message else "Empty message"
