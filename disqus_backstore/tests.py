@@ -69,8 +69,13 @@ class DisqusAdminTest(TestCase):
 
     @mock.patch.object(DisqusQuery, 'get_threads_list', return_value=THREADS_LIST_RESPONSE)
     def test_thread_change_list_view__normal_case__correct_template_response(self, _):
-
-        request = RequestFactory().get('/admin/disqus_backstore/thread/', follow=True)
+        changelist_url = reverse(
+            '{admin_site_name}:{app_label}_{model_name}_changelist'.format(
+                admin_site_name=admin.site.name,
+                app_label=Thread._meta.app_label,
+                model_name=Thread._meta.model_name
+            ))
+        request = RequestFactory().get(changelist_url, follow=True)
         request.user = MockSuperUser()
 
         response = ThreadAdmin(Thread, admin.site).changelist_view(request)
@@ -96,8 +101,13 @@ class DisqusAdminTest(TestCase):
     @mock.patch.object(DisqusQuery, 'get_threads_list', return_value=THREADS_LIST_RESPONSE)
     @mock.patch.object(DisqusQuery, 'get_posts_list', return_value=POSTS_LIST_RESPONSE)
     def test_post_change_list_view__normal_case__correct_template_response(self, _, __):
-
-        request = RequestFactory().get('/admin/disqus_backstore/post/', follow=True)
+        changelist_url = reverse(
+            '{admin_site_name}:{app_label}_{model_name}_changelist'.format(
+                admin_site_name=admin.site.name,
+                app_label=Post._meta.app_label,
+                model_name=Post._meta.model_name
+            ))
+        request = RequestFactory().get(changelist_url, follow=True)
         request.user = MockSuperUser()
 
         response = PostAdmin(Post, admin.site).changelist_view(request)
@@ -124,7 +134,12 @@ class DisqusAdminTest(TestCase):
     def test_thread_change_form_view__normal_case__correct_template_response(self, _):
         thread_data = SINGLE_THREAD_LIST_RESPONSE['response'][0]
         thread_object = thread_factory(thread_data)
-        request = RequestFactory().get('/admin/disqus_backstore/thread/{id}/change/'.format(id=thread_object.id), follow=True)
+        change_url = reverse('{admin_site_name}:{app_label}_{model_name}_change'.format(
+            admin_site_name=admin.site.name,
+            app_label=Thread._meta.app_label,
+            model_name=Thread._meta.model_name
+        ), args=[thread_object.id])
+        request = RequestFactory().get(change_url, follow=True)
         request.user = MockSuperUser()
 
         response = ThreadAdmin(Thread, admin.site).change_view(request, thread_data['id'])
@@ -153,7 +168,12 @@ class DisqusAdminTest(TestCase):
     def test_post_change_form_view__normal_case__correct_template_response(self, _, __):
         post_data = POST_DETAIL_RESPONSE['response']
         post_object = post_factory(post_data)
-        request = RequestFactory().get('/admin/disqus_backstore/post/{id}/change/'.format(id=post_object.id), follow=True)
+        change_url = reverse('{admin_site_name}:{app_label}_{model_name}_change'.format(
+            admin_site_name=admin.site.name,
+            app_label=Post._meta.app_label,
+            model_name=Post._meta.model_name
+        ), args=[post_object.id])
+        request = RequestFactory().get(change_url, follow=True)
         request.user = MockSuperUser()
 
         response = PostAdmin(Post, admin.site).change_view(request, post_data['id'])
@@ -177,10 +197,15 @@ class DisqusAdminTest(TestCase):
         thread_object = thread_factory(thread_data)
         related_post_object = post_factory(post_data)
         related_post_object.thread = thread_object
-        request = RequestFactory().get('/admin/disqus_backstore/thread/{id}/delete/'.format(id=thread_object.id), follow=True)
+        delete_url = reverse('{admin_site_name}:{app_label}_{model_name}_delete'.format(
+            admin_site_name=admin.site.name,
+            app_label=Thread._meta.app_label,
+            model_name=Thread._meta.model_name
+        ), args=[thread_object.id])
+        request = RequestFactory().get(delete_url, follow=True)
         request.user = MockSuperUser()
 
-        response = ThreadAdmin(Thread, admin.site).delete_view(request, thread_data['id'])
+        response = ThreadAdmin(Thread, admin.site).delete_view(request, str(thread_object.id))
         template_names = set([
             'admin/delete_confirmation.html',
             'admin/disqus_backstore/delete_confirmation.html',
@@ -240,7 +265,12 @@ class DisqusAdminTest(TestCase):
             )
         )
         self.client.force_login(deleteuser)
-        delete_url, delete_dict = '/admin/disqus_backstore/thread/{id}/delete/'.format(id=thread_object.id), {'post': 'yes'}
+        delete_url = reverse('{admin_site_name}:{app_label}_{model_name}_delete'.format(
+            admin_site_name=admin.site.name,
+            app_label=Thread._meta.app_label,
+            model_name=Thread._meta.model_name
+        ), args=[thread_object.id])
+        delete_dict = {'post': 'yes'}
 
         response = self.client.post(delete_url, delete_dict)
 
@@ -256,7 +286,13 @@ class DisqusAdminTest(TestCase):
         thread_object = thread_factory(thread_data)
         post_object = post_factory(post_data)
         post_object.thread = thread_object
-        request = RequestFactory().get('/admin/disqus_backstore/post/{id}/delete/'.format(id=post_object.id), follow=True)
+        delete_url = reverse('{admin_site_name}:{app_label}_{model_name}_delete'.format(
+            admin_site_name=admin.site.name,
+            app_label=Post._meta.app_label,
+            model_name=Post._meta.model_name
+        ), args=[post_data['id']])
+
+        request = RequestFactory().get(delete_url, follow=True)
         request.user = MockSuperUser()
 
         response = PostAdmin(Post, admin.site).delete_view(request, post_data['id'])
@@ -315,12 +351,18 @@ class DisqusAdminTest(TestCase):
             )
         )
         self.client.force_login(deleteuser)
-        delete_url, delete_dict = '/admin/disqus_backstore/post/{id}/delete/'.format(id=post_object.id), {'post': 'yes'}
+        delete_url = reverse('{admin_site_name}:{app_label}_{model_name}_delete'.format(
+            admin_site_name=admin.site.name,
+            app_label=Post._meta.app_label,
+            model_name=Post._meta.model_name
+        ), args=[post_data['id']])
+        delete_dict = {'post': 'yes'}
 
         response = self.client.post(delete_url, delete_dict)
 
         self.assertEqual(response.status_code, 302)
         delete_post_mock.assert_called_once_with(post_object.id)
+
 
 class DisqusThreadQuerySetTest(TestCase):
 
