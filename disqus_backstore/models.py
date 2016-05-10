@@ -6,7 +6,6 @@ from .manager import ThreadManager, PostManager
 
 
 class Thread(models.Model):
-    #objects = ThreadManager()
     _base_manager = ThreadManager()
     _default_manager = _base_manager
     objects = _default_manager
@@ -36,9 +35,6 @@ class Thread(models.Model):
 
 
 class Post(models.Model):
-    #objects = PostManager()
-    #_base_manager = PostManager()
-    #_default_manager = PostManager()
     _base_manager = PostManager()
     _default_manager = _base_manager
     objects = _default_manager
