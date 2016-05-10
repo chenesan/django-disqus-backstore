@@ -45,9 +45,12 @@ class Post(models.Model):
     message = models.TextField(blank=True)
     thread = models.ForeignKey(Thread)
 
+    def delete(self, using=None, keep_parents=False):
+        self.__class__._default_manager.delete(self)
+
     def save(self, force_insert=False, force_update=False, using=None,
              update_fields=None):
-        pass
+        self.__class__._default_manager.update(self)
 
     def __eq__(self, rhs):
         return self.id == rhs.id

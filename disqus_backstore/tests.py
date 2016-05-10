@@ -24,12 +24,14 @@ TEST_DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_d
 THREADS_LIST_RESPONSE = json.load(open(os.path.join(TEST_DATA_DIR, 'threads_list.json'), 'r'))
 POSTS_LIST_RESPONSE = json.load(open(os.path.join(TEST_DATA_DIR, 'posts_list.json'), 'r'))
 POST_DETAIL_RESPONSE = json.load(open(os.path.join(TEST_DATA_DIR, 'post_detail.json'), 'r'))
-SINGLE_THREAD_LIST_RESPONSE =  json.load(open(os.path.join(TEST_DATA_DIR, 'single_thread_list.json'), 'r'))
+SINGLE_THREAD_LIST_RESPONSE = json.load(open(os.path.join(TEST_DATA_DIR, 'single_thread_list.json'), 'r'))
+
 
 def get_perm(Model, perm):
     """Return the permission object, for the Model"""
     ct = ContentType.objects.get_for_model(Model)
     return Permission.objects.get(content_type=ct, codename=perm)
+
 
 def thread_factory(thread_data):
     thread = Thread.objects.create(
@@ -40,6 +42,7 @@ def thread_factory(thread_data):
     )
     return thread
 
+
 def post_factory(post_data):
     post = Post.objects.create(
         id=int(post_data.get('id')),
@@ -49,6 +52,7 @@ def post_factory(post_data):
         message=post_data.get('raw_message'),
     )
     return post
+
 
 class MockSuperUser(object):
     is_active = True
@@ -191,7 +195,7 @@ class DisqusAdminTest(TestCase):
         # so we have to put it into a list...
         deleted_objects = [format_html('{}: <a href="{}">{}</a>',
                                        capfirst(obj.__class__._meta.verbose_name),
-                                       reverse('%s:%s_%s_change'%(
+                                       reverse('%s:%s_%s_change' % (
                                            admin.site.name,
                                            obj._meta.app_label,
                                            obj._meta.model_name
@@ -236,7 +240,7 @@ class DisqusAdminTest(TestCase):
             )
         )
         self.client.force_login(deleteuser)
-        delete_url, delete_dict = '/admin/disqus_backstore/thread/{id}/delete/'.format(id=thread_object.id), {'post':'yes'}
+        delete_url, delete_dict = '/admin/disqus_backstore/thread/{id}/delete/'.format(id=thread_object.id), {'post': 'yes'}
 
         response = self.client.post(delete_url, delete_dict)
 
@@ -244,6 +248,79 @@ class DisqusAdminTest(TestCase):
         delete_thread_mock.assert_called_once_with(thread_object.id)
         delete_posts_mock.assert_called_once()
 
+    @mock.patch.object(DisqusQuery, 'get_threads_list', return_value=THREADS_LIST_RESPONSE)
+    @mock.patch.object(DisqusQuery, 'get_posts_list', return_value=POSTS_LIST_RESPONSE)
+    def test_post_delete_view__get__success(self, _, __):
+        thread_data = THREADS_LIST_RESPONSE['response'][0]
+        post_data = POSTS_LIST_RESPONSE['response'][0]
+        thread_object = thread_factory(thread_data)
+        post_object = post_factory(post_data)
+        post_object.thread = thread_object
+        request = RequestFactory().get('/admin/disqus_backstore/post/{id}/delete/'.format(id=post_object.id), follow=True)
+        request.user = MockSuperUser()
+
+        response = PostAdmin(Post, admin.site).delete_view(request, post_data['id'])
+        template_names = set([
+            'admin/delete_confirmation.html',
+            'admin/disqus_backstore/delete_confirmation.html',
+            'admin/disqus_backstore/post/delete_confirmation.html',
+        ])
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(set(response.template_name), template_names)
+        # dirty hack for formatting deleted_object context... Use the same formatting
+        # in django.contrib.admin.utils.get_deleted_objects
+        deleted_objects = [format_html('{}: <a href="{}">{}</a>',
+                                       capfirst(obj.__class__._meta.verbose_name),
+                                       reverse('%s:%s_%s_change' % (
+                                           admin.site.name,
+                                           obj._meta.app_label,
+                                           obj._meta.model_name
+                                       ), None, (quote(obj._get_pk_val()),)),
+                                       obj) for obj in [post_object]]
+        self.assertEqual(response.context_data['deleted_objects'],
+                         deleted_objects)
+
+    @mock.patch.object(DisqusQuery, 'delete_post')
+    @mock.patch.object(DisqusQuery, 'get_threads_list', return_value=THREADS_LIST_RESPONSE)
+    @mock.patch.object(DisqusQuery, 'get_posts_list', return_value=POSTS_LIST_RESPONSE)
+    def test_post_delete_view__post__success(self, _, __, delete_post_mock):
+        thread_data = THREADS_LIST_RESPONSE['response'][0]
+        post_data = POSTS_LIST_RESPONSE['response'][0]
+        thread_object = thread_factory(thread_data)
+        post_object = post_factory(post_data)
+        post_object.thread = thread_object
+        # The way to create user is as same as the way in
+        # `django.tests.admin_view.tests.AdminViewPermissionTests.test_delete_view`
+        # Because RequestFactory can't handle MiddleWare,
+        # even we set the `request._dont_enforce_csrf_checks to prevent csrf token check
+        # We still need to handle the message for MessageMiddleWare used in admin view.
+        # Workaround for this will make test code hard to understand.
+        # So here I choose test it directly with `self.client`
+        deleteuser = User.objects.create_user(
+            username='deleteuser',
+            password='secret',
+            is_staff=True
+        )
+        deleteuser.user_permissions.add(
+            get_perm(
+                Thread,
+                get_permission_codename('delete', Thread._meta)
+            )
+        )
+        deleteuser.user_permissions.add(
+            get_perm(
+                Post,
+                get_permission_codename('delete', Post._meta)
+            )
+        )
+        self.client.force_login(deleteuser)
+        delete_url, delete_dict = '/admin/disqus_backstore/post/{id}/delete/'.format(id=post_object.id), {'post': 'yes'}
+
+        response = self.client.post(delete_url, delete_dict)
+
+        self.assertEqual(response.status_code, 302)
+        delete_post_mock.assert_called_once_with(post_object.id)
 
 class DisqusThreadQuerySetTest(TestCase):
 
@@ -251,7 +328,7 @@ class DisqusThreadQuerySetTest(TestCase):
         thread_data = THREADS_LIST_RESPONSE['response'][0]
         thread_id = int(thread_data.get('id'))
         with mock.patch.object(DisqusQuery, 'get_threads_list', return_value={
-                'response': [thread_data,]
+                'response': [thread_data]
         }):
             obj = Thread.objects.get(id=thread_id)
             self.assertEqual(obj.id, thread_id)

@@ -217,10 +217,26 @@ class ThreadQuerySet(DisqusQuerySet):
                 new_val = getattr(new_instance, f.attname)
                 if old_val != new_val:
                     update_func = getattr(self.query, 'change_thread_'+attname)
-                    result = update_func(new_instance.id, old_val, new_val)
+                    update_func(new_instance.id, old_val, new_val)
 
 
 class PostQuerySet(DisqusQuerySet):
     def __init__(self, model=None, query=None, using=None, hints=None):
         super(PostQuerySet, self).__init__(model, query, using, hints)
         self._iterable_class = PostIterable
+
+    def delete(self, obj):
+        # Have to remove posts at first
+        self.query.delete_post(obj.id)
+
+    def update(self, new_instance):
+        old_instance = self.get(id=new_instance.id)
+        fields = self.model._meta.get_fields()
+        for f in fields:
+            attname = getattr(f, 'attname', None)
+            if attname:
+                old_val = getattr(old_instance, f.attname)
+                new_val = getattr(new_instance, f.attname)
+                if old_val != new_val:
+                    update_func = getattr(self.query, 'change_post_'+attname)
+                    update_func(new_instance.id, old_val, new_val)
