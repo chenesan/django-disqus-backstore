@@ -36,7 +36,6 @@ def thread_factory(thread_data):
         id=int(thread_data.get('id')),
         forum=thread_data.get('forum'),
         is_closed=thread_data.get('isClosed'),
-        is_deleted=thread_data.get('isDeleted'),
         title=thread_data.get('title'),
     )
     return thread
@@ -46,7 +45,6 @@ def post_factory(post_data):
         id=int(post_data.get('id')),
         forum=post_data.get('forum'),
         is_approved=post_data.get('isApproved'),
-        is_deleted=post_data.get('isDeleted'),
         is_spam=post_data.get('isSpam'),
         message=post_data.get('raw_message'),
     )

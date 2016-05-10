@@ -54,7 +54,6 @@ class ThreadIterable(BaseIterable):
                      title=thread.get('title'),
                      link=thread.get('link'),
                      forum=thread.get('forum'),
-                     is_deleted=thread.get('isDeleted'),
                      is_closed=thread.get('isClosed'),
                  )
         # Dirty hack for unique check in admin changeform view
@@ -77,7 +76,6 @@ class PostIterable(BaseIterable):
                     id=int(post.get('id')),
                     forum=post.get('forum'),
                     is_approved=post.get('isApproved'),
-                    is_deleted=post.get('isDeleted'),
                     is_spam=post.get('isSpam'),
                     message=post.get('raw_message'),
                     thread=thread,

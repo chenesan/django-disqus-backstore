@@ -13,7 +13,6 @@ class Thread(models.Model):
     forum = models.CharField(max_length=100)
     id = models.BigIntegerField(primary_key=True)
     is_closed = models.BooleanField()
-    is_deleted = models.BooleanField()
     link = models.URLField()
     title = models.CharField(max_length=100)
 
@@ -42,7 +41,6 @@ class Post(models.Model):
     forum = models.CharField(max_length=100)
     id = models.BigIntegerField(primary_key=True)
     is_approved = models.BooleanField()
-    is_deleted = models.BooleanField()
     is_spam = models.BooleanField()
     message = models.TextField(blank=True)
     thread = models.ForeignKey(Thread)
