@@ -39,6 +39,12 @@ def meet_querys(data, query_objs):
                 return False
             elif not q.negate and data['thread'] not in thread_ids:
                 return False
+        if q.query_string == 'pk__in':
+            ids = q.value
+            if q.negate and data['id'] in ids:
+                return False
+            elif not q.negate and data['id'] not in ids:
+                return False
     return True
 
 

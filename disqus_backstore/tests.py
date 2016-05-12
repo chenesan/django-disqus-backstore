@@ -231,6 +231,90 @@ class DisqusAdminTest(TestCase):
         self.assertEqual(sorted(response.context_data['deleted_objects']),
                          sorted(deleted_objects))
 
+    @mock.patch.object(DisqusQuery, 'get_threads_list', return_value=THREADS_LIST_RESPONSE)
+    @mock.patch.object(DisqusQuery, 'get_posts_list', return_value=POSTS_LIST_RESPONSE)
+    def test_thread_delete_action__post__success(self, _, __):
+        thread_data = THREADS_LIST_RESPONSE['response'][0]
+        post_data = POSTS_LIST_RESPONSE['response'][0]
+        thread_object = thread_factory(thread_data)
+        related_post_object = post_factory(post_data)
+        related_post_object.thread = thread_object
+        # The way to create user is as same as the way in
+        # `django.tests.admin_view.tests.AdminViewPermissionTests.test_delete_view`
+        # Because RequestFactory can't handle MiddleWare,
+        # even we set the `request._dont_enforce_csrf_checks to prevent csrf token check
+        # We still need to handle the message for MessageMiddleWare used in admin view.
+        # Workaround for this will make test code hard to understand.
+        # So here I choose test it directly with `self.client`
+        deleteuser = User.objects.create_user(
+            username='deleteuser',
+            password='secret',
+            is_staff=True
+        )
+        deleteuser.user_permissions.add(
+            get_perm(
+                Thread,
+                get_permission_codename('delete', Thread._meta)
+            )
+        )
+        deleteuser.user_permissions.add(
+            get_perm(
+                Post,
+                get_permission_codename('delete', Post._meta)
+            )
+        )
+        deleteuser.user_permissions.add(
+            get_perm(
+                Thread,
+                get_permission_codename('change', Thread._meta)
+            )
+        )
+        deleteuser.user_permissions.add(
+            get_perm(
+                Post,
+                get_permission_codename('change', Post._meta)
+            )
+        )
+
+        self.client.force_login(deleteuser)
+        delete_action_url = reverse('{admin_site_name}:{app_label}_{model_name}_changelist'.format(
+            admin_site_name=admin.site.name,
+            app_label=Thread._meta.app_label,
+            model_name=Thread._meta.model_name
+        ))
+        delete_action_dict = {
+            'action': 'delete_selected',
+            'select_across': 0,
+            'index': 0,
+            '_selected_action': thread_object.id
+        }
+
+        response = self.client.post(delete_action_url, delete_action_dict)
+        template_names = set([
+            'admin/delete_selected_confirmation.html',
+            'admin/disqus_backstore/delete_selected_confirmation.html',
+            'admin/disqus_backstore/thread/delete_selected_confirmation.html',
+        ])
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(set(response.template_name), template_names)
+        # dirty hack for formatting deleted_object context... Use the same formatting
+        # in django.contrib.admin.utils.get_deleted_objects
+        deleted_objects = [format_html('{}: <a href="{}">{}</a>',
+                                       capfirst(obj.__class__._meta.verbose_name),
+                                       reverse('%s:%s_%s_change' % (
+                                           admin.site.name,
+                                           obj._meta.app_label,
+                                           obj._meta.model_name
+                                       ), None, (quote(obj._get_pk_val()),)),
+                                       obj) for obj in [thread_object, related_post_object]]
+        # the related post objects will be a list of post object,
+        # so we have to put it into a list...
+        deleted_objects[1] = [deleted_objects[1]]
+        # Because it's delete_select_action we have to put it into another list......
+        deleted_objects = [deleted_objects]
+        self.assertEqual(sorted(response.context_data['deletable_objects']),
+                         sorted(deleted_objects))
+
     @mock.patch.object(DisqusQuery, 'delete_thread')
     @mock.patch.object(DisqusQuery, 'delete_posts')
     @mock.patch.object(DisqusQuery, 'get_threads_list', return_value=THREADS_LIST_RESPONSE)
@@ -327,13 +411,6 @@ class DisqusAdminTest(TestCase):
         thread_object = thread_factory(thread_data)
         post_object = post_factory(post_data)
         post_object.thread = thread_object
-        # The way to create user is as same as the way in
-        # `django.tests.admin_view.tests.AdminViewPermissionTests.test_delete_view`
-        # Because RequestFactory can't handle MiddleWare,
-        # even we set the `request._dont_enforce_csrf_checks to prevent csrf token check
-        # We still need to handle the message for MessageMiddleWare used in admin view.
-        # Workaround for this will make test code hard to understand.
-        # So here I choose test it directly with `self.client`
         deleteuser = User.objects.create_user(
             username='deleteuser',
             password='secret',
@@ -366,7 +443,6 @@ class DisqusAdminTest(TestCase):
 
 
 class DisqusThreadQuerySetTest(TestCase):
-
     def test_get__normal_case__get_object_successfully(self):
         thread_data = THREADS_LIST_RESPONSE['response'][0]
         thread_id = int(thread_data.get('id'))
