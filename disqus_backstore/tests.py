@@ -18,6 +18,7 @@ from django.utils.text import capfirst
 from .admin import ThreadAdmin, PostAdmin
 from .models import Thread, Post
 from disqus_interface import DisqusQuery
+from .utils import cache_clearer, query_cache
 
 
 TEST_DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_data')
@@ -374,3 +375,116 @@ class DisqusThreadQuerySetTest(TestCase):
         }):
             obj = Thread.objects.get(id=thread_id)
             self.assertEqual(obj.id, thread_id)
+
+
+class UtilsTest(TestCase):
+    def test_query_cache__no_parameter__works(self):
+        class A(object):
+            x = 0
+
+            @query_cache('f')
+            def f1(self):
+                self.x += 1
+                return self.x
+
+        a = A()
+        y1 = a.f1()
+        self.assertEqual(y1, 1)
+        # Result is cached so it should still return 1
+        y2 = a.f1()
+        self.assertEqual(y2, 1)
+
+    def test_query_cache__with_kwargs__works(self):
+        class A(object):
+            x = 0
+            @query_cache('f')
+            def f1(self, kw=0):
+                self.x += kw
+                return self.x
+
+        a = A()
+        y1 = a.f1(kw=1)
+        self.assertEqual(y1, 1)
+        # Result is cached since kwarg is the same
+        y2 = a.f1(kw=1)
+        self.assertEqual(y2, 1)
+        # Result is calculated since kwarg is different
+        y3 = a.f1(kw=2)
+        self.assertEqual(y3, a.x)
+
+    def test_query_cache__with_args_and_kwargs__works(self):
+        class A(object):
+            x = 0
+            @query_cache('f')
+            def f1(self, arg, kw=0):
+                self.x += (arg + kw)
+                return self.x
+
+        a = A()
+        y1 = a.f1(1, kw=1)
+        self.assertEqual(y1, 2)
+        # Result is cached since all args are the same
+        y2 = a.f1(1, kw=1)
+        self.assertEqual(y2, 2)
+        # Result is calculated since arg is different
+        y3 = a.f1(2, kw=1)
+        self.assertEqual(y3, a.x)
+
+    def test_cache_clearer__update_operation__cache_cleared(self):
+        class API(object):
+            version = 0
+
+            @query_cache('thread')
+            def get_thread(self, thread_id):
+                return 'thread_{id}_{version}'.format(
+                    id=thread_id,
+                    version=self.version
+                )
+
+            @query_cache('post')
+            def get_post(self, post_id):
+                return 'post_{id}_{version}'.format(
+                    id=post_id,
+                    version=self.version
+                )
+
+            @cache_clearer(['thread'])
+            def update_thread(self, thread_id):
+                self.version += 1
+
+        api = API()
+        y1 = api.get_thread(1)
+        # Result is cached since all args are the same
+        y2 = api.update_thread(1)
+        y3 = api.get_thread(1)
+        self.assertEqual(y3, "thread_1_1")
+
+    def test_categorize_func_work_with_cache_clearer(self):
+        class API(object):
+            version = 0
+            categories = dict()
+
+            @query_cache('thread')
+            def get_thread(self, thread_id):
+                return 'thread_{id}_{version}'.format(
+                    id=thread_id,
+                    version=self.version
+                )
+
+            @query_cache('post')
+            def get_post(self, post_id):
+                return 'post_{id}_{version}'.format(
+                    id=post_id,
+                    version=self.version
+                )
+
+            @cache_clearer(['thread'])
+            def update_thread(self, thread_id):
+                self.version += 1
+
+        api = API()
+        y1 = api.get_thread(1)
+        # Result is cached since all args are the same
+        y2 = api.update_thread(1)
+        y3 = api.get_thread(1)
+        self.assertEqual(y3, "thread_1_1")

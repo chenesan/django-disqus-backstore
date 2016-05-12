@@ -8,7 +8,7 @@ import copy
 
 from django.db.models.query import BaseIterable
 
-from .disqus_interface import DisqusQuery
+from .disqus_interface import disqus_query
 
 
 class Query(object):
@@ -91,7 +91,7 @@ class DisqusQuerySet(object):
     ##############
     def __init__(self, model=None, query=None, using=None, hints=None):
         self.model = model
-        self.query = query or DisqusQuery()
+        self.query = query or disqus_query
         if using:
             self.using = using
         self._prefetch_related_lookups = []

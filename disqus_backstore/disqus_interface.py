@@ -1,5 +1,6 @@
 import requests
 from django.conf import settings
+from .utils import cache_clearer, query_cache
 
 
 class DisqusQuery(object):
@@ -10,6 +11,7 @@ class DisqusQuery(object):
     forum = getattr(settings, "DISQUS_FORUM_SHORTNAME")
     access_token = getattr(settings, "DISQUS_ACCESS_TOKEN")
 
+    @query_cache('thread')
     def get_threads_list(self, *args, **kwargs):
         params = {
             'api_secret': self.secret_key,
@@ -20,6 +22,7 @@ class DisqusQuery(object):
         return requests.get('https://disqus.com/api/3.0/forums/listThreads.json',
                             params=params).json()
 
+    @query_cache('post')
     def get_posts_list(self, thread_id=None, **kwargs):
         params = {
             'api_secret': self.secret_key,
@@ -41,6 +44,7 @@ class DisqusQuery(object):
             return requests.get('https://disqus.com/api/3.0/forums/listPosts.json',
                                 params=params).json()
 
+    @query_cache('thread')
     def get_thread(self, thread_id, *args, **kwargs):
         return requests.get('https://disqus.com/api/3.0/threads/details.json',
                             params={
@@ -48,6 +52,7 @@ class DisqusQuery(object):
                                 'thread': thread_id
                             }).json()
 
+    @query_cache('post')
     def get_post(self, post_id, *args, **kwargs):
         return requests.get('https://disqus.com/api/3.0/posts/details.json',
                             params={
@@ -62,6 +67,7 @@ class DisqusQuery(object):
         else:
             return self.close_thread(thread_id)
 
+    @cache_clearer(['thread'])
     def open_thread(self, thread_id):
         return requests.post('https://disqus.com/api/3.0/threads/open.json',
                             params={
@@ -70,6 +76,7 @@ class DisqusQuery(object):
                                 'access_token': self.access_token
                             }).json()
 
+    @cache_clearer(['thread'])
     def close_thread(self, thread_id):
         return requests.post('https://disqus.com/api/3.0/threads/close.json',
                              params={
@@ -78,6 +85,7 @@ class DisqusQuery(object):
                                  'access_token': self.access_token
                              }).json()
 
+    @cache_clearer(['thread', 'post'])
     def delete_thread(self, thread_id):
         return requests.post('https://disqus.com/api/3.0/threads/remove.json',
                             params={
@@ -86,6 +94,7 @@ class DisqusQuery(object):
                                 'access_token': self.access_token
                             }).json()
 
+    @cache_clearer(['post'])
     def delete_post(self, post_id):
         return requests.post('https://disqus.com/api/3.0/posts/remove.json',
                             params={
@@ -94,6 +103,7 @@ class DisqusQuery(object):
                                 'access_token': self.access_token
                             }).json()
 
+    @cache_clearer(['thread', 'post'])
     def delete_threads(self, thread_ids):
         # thread_ids must be a list of thread id
         return requests.post('https://disqus.com/api/3.0/threads/remove.json',
@@ -103,6 +113,7 @@ class DisqusQuery(object):
                                 'access_token': self.access_token
                             }).json()
 
+    @cache_clearer(['post'])
     def delete_posts(self, post_ids):
         # post_ids must be a list of post id
         return requests.post('https://disqus.com/api/3.0/posts/remove.json',
@@ -112,6 +123,7 @@ class DisqusQuery(object):
                                 'access_token': self.access_token
                             }).json()
 
+    @cache_clearer(['thread'])
     def recover_thread(self, thread_id):
         return requests.post('https://disqus.com/api/3.0/threads/restore.json',
                              params={
@@ -119,3 +131,5 @@ class DisqusQuery(object):
                                  'thread': thread_id,
                                  'access_token': self.access_token
                              }).json()
+
+disqus_query = DisqusQuery()
