@@ -1,3 +1,5 @@
+from django.utils import timezone
+
 class QueryNotRegistered(Exception):
     pass
 
@@ -56,7 +58,19 @@ def cache_clearer(query_categories):
 
     return CacheClearer
 
-def query_cache(category):
+class QueryRecord(object):
+    def __init__(self, result, refreshed_seconds):
+        self.result = result
+        self.timestamp = timezone.now()
+        self.refreshed_seconds = refreshed_seconds
+
+    def is_outdated(self, thres_seconds=None):
+        if thres_seconds is None:
+            thres_seconds = self.refreshed_seconds
+        time_delta = timezone.now() - self.timestamp
+        return time_delta.seconds > thres_seconds
+
+def query_cache(category, refreshed_seconds=5):
     """
     A decorator for caching query API result.
     For each call we use the arguments as key.
@@ -72,17 +86,19 @@ def query_cache(category):
             self.call_record = dict()
             self.func = func
             self.name = getattr(func, 'name', func.__name__)
+            self.refreshed_seconds = refreshed_seconds
             cache_registry.register(category, self)
 
         def __call__(self, *args, **kwargs):
             args_record = tuple(args)
             kwargs_record = tuple(kwargs.items())
             all_args = (args_record, kwargs_record)
-            if all_args in self.call_record:
-                return self.call_record.get(all_args)
+            record = self.call_record.get(all_args, None)
+            if record and not record.is_outdated():
+                return record.result
             else:
                 result = self.func(*args, **kwargs)
-                self.call_record[all_args] = result
+                self.call_record[all_args] = QueryRecord(result, self.refreshed_seconds)
                 return result
 
         def __get__(self, instance, owner):

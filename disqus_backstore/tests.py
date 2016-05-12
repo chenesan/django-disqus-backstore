@@ -459,32 +459,21 @@ class UtilsTest(TestCase):
         y3 = api.get_thread(1)
         self.assertEqual(y3, "thread_1_1")
 
-    def test_categorize_func_work_with_cache_clearer(self):
+    def test_query_cache__after_n_seconds__will_be_cleared(self):
+        # No cached time
+        refreshed_seconds = -1
         class API(object):
             version = 0
             categories = dict()
-
-            @query_cache('thread')
+            @query_cache('thread',refreshed_seconds=refreshed_seconds)
             def get_thread(self, thread_id):
+                self.version += 1
                 return 'thread_{id}_{version}'.format(
                     id=thread_id,
                     version=self.version
                 )
 
-            @query_cache('post')
-            def get_post(self, post_id):
-                return 'post_{id}_{version}'.format(
-                    id=post_id,
-                    version=self.version
-                )
-
-            @cache_clearer(['thread'])
-            def update_thread(self, thread_id):
-                self.version += 1
-
         api = API()
         y1 = api.get_thread(1)
-        # Result is cached since all args are the same
-        y2 = api.update_thread(1)
-        y3 = api.get_thread(1)
-        self.assertEqual(y3, "thread_1_1")
+        y2 = api.get_thread(1)
+        self.assertEqual(y2, "thread_1_2")
