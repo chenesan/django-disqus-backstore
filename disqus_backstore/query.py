@@ -82,7 +82,6 @@ class PostIterable(BaseIterable):
                     id=int(post.get('id')),
                     forum=post.get('forum'),
                     is_approved=post.get('isApproved'),
-                    is_spam=post.get('isSpam'),
                     message=post.get('raw_message'),
                     thread=thread,
                 )
@@ -131,7 +130,7 @@ class DisqusQuerySet(object):
 
     # Iterator factory
     def iterator(self):
-        return self._iterable_class(self)
+        return iter(self._iterable_class(self))
 
     # Create Model Instance
     def create(self, *args, **kwargs):

@@ -24,6 +24,8 @@ class Thread(models.Model):
         self.__class__._default_manager.update(self)
 
     def __eq__(self, rhs):
+        if not isinstance(rhs, self.__class__):
+            return False
         return self.id == rhs.id
 
     def __ne__(self, rhs):
@@ -41,7 +43,6 @@ class Post(models.Model):
     forum = models.CharField(max_length=100)
     id = models.BigIntegerField(primary_key=True)
     is_approved = models.BooleanField()
-    is_spam = models.BooleanField()
     message = models.TextField(blank=True)
     thread = models.ForeignKey(Thread)
 
@@ -53,6 +54,8 @@ class Post(models.Model):
         self.__class__._default_manager.update(self)
 
     def __eq__(self, rhs):
+        if not isinstance(rhs, self.__class__):
+            return False
         return self.id == rhs.id
 
     def __ne__(self, rhs):

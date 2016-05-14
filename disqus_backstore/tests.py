@@ -49,7 +49,6 @@ def post_factory(post_data):
         id=int(post_data.get('id')),
         forum=post_data.get('forum'),
         is_approved=post_data.get('isApproved'),
-        is_spam=post_data.get('isSpam'),
         message=post_data.get('raw_message'),
     )
     return post

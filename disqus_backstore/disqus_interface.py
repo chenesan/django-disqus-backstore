@@ -196,5 +196,49 @@ class DisqusQuery(object):
         }
         return send_request_to_disqus(model_name, method_name, header, params)
 
+    def change_post_is_approved(self, post_id, old_val, new_val):
+        assert old_val != new_val
+        if old_val:
+            return self.spam_post(post_id)
+        else:
+            return self.approve_post(post_id)
+
+    @cache_clearer(['post'])
+    def approve_post(self, post_id):
+        model_name = 'posts'
+        method_name = 'approve'
+        header = "post"
+        params = {
+            'api_secret': self.secret_key,
+            'post': post_id,
+            'access_token': self.access_token
+        }
+        return send_request_to_disqus(model_name, method_name, header, params)
+
+
+    @cache_clearer(['post'])
+    def spam_post(self, post_id):
+        model_name = 'posts'
+        method_name = 'spam'
+        header = "post"
+        params = {
+            'api_secret': self.secret_key,
+            'post': post_id,
+            'access_token': self.access_token
+        }
+        return send_request_to_disqus(model_name, method_name, header, params)
+
+    @cache_clearer(['post'])
+    def change_post_message(self, post_id, old_val, new_val):
+        model_name = 'posts'
+        method_name = 'update'
+        header = "post"
+        params = {
+            'api_secret': self.secret_key,
+            'post': post_id,
+            'message': new_val,
+            'access_token': self.access_token
+        }
+        return send_request_to_disqus(model_name, method_name, header, params)
 
 disqus_query = DisqusQuery()
