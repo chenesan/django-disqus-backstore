@@ -17,7 +17,7 @@ from django.utils.text import capfirst
 
 from .admin import ThreadAdmin, PostAdmin
 from .models import Thread, Post
-from disqus_interface import DisqusQuery
+from disqus_interface import DisqusQuery, send_request_to_disqus, DISQUSAPIError
 from .utils import cache_clearer, query_cache
 
 
@@ -451,6 +451,20 @@ class DisqusThreadQuerySetTest(TestCase):
         }):
             obj = Thread.objects.get(id=thread_id)
             self.assertEqual(obj.id, thread_id)
+
+
+class DisqusQueryTest(TestCase):
+    def test_call_disqus_api__response_code_not_zero__raise_exception(self):
+        class Error(object):
+            def json(self):
+                error_response = {
+                    "code": 7,
+                    "response": "It's a DISQUS api error response mock."
+                }
+                return error_response
+        with mock.patch('requests.get', return_value=Error()):
+            with self.assertRaises(DISQUSAPIError):
+                send_request_to_disqus("threads", "list", "get", {})
 
 
 class UtilsTest(TestCase):
