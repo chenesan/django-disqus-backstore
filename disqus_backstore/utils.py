@@ -40,15 +40,10 @@ def cache_clearer(query_categories):
             self.query_categories = query_categories
 
         def __call__(self, *args, **kwargs):
-            try:
-                result = self.func(*args, **kwargs)
-            except:
-                #TODO: should be handled here or just passed to upper stack?
-                pass
-            else:
-                for query_category in self.query_categories:
-                    cache_registry.clear(query_category)
-                return result
+            result = self.func(*args, **kwargs)
+            for query_category in self.query_categories:
+                cache_registry.clear(query_category)
+            return result
 
         def __get__(self, instance, owner):
             def f(*args, **kwargs):
