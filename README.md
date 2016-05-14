@@ -1,8 +1,6 @@
 # django-disqus-backstore
 
-A django app for managing Disqus post/thread in django admin.
-
-### WARNING: Currently this project is under initial construction to show "Hey, we can CRUD Disqus post in the django admin!", so the setting and usage may change frequently. It's unstable for real project now.
+A django app for managing(approve/spam/delete/update) Disqus posts in django admin.
 
 ## How to use
 
@@ -18,7 +16,7 @@ A django app for managing Disqus post/thread in django admin.
 
    * `DISUQS_ACCESS_TOKEN`: `str`, the access token for your own application.
 
-See the detail in [disqus api](https://disqus.com/api/applications/) .
+You can apply them in Disqus API site; See the detail in [disqus api](https://disqus.com/api/applications/) .
 
 3. `python manage.py runserver` and login to the django admin page. You should see the Disqus Thread/Post object list now!
 
